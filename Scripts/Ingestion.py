@@ -5,6 +5,9 @@
 
 import argparse
 from pathlib import Path
+import pandas as pd
+import regex as re
+import traceback
 
 DEFAULT_FOLDER = "/Users/deeksha_dwarakanath/Downloads/Cloud-Native_Data_Engineering/Final_Project/fitbit"
 
@@ -22,15 +25,23 @@ def main():
     fitbit_folder = Path(parse())
     try:
         files = [f for f in fitbit_folder.rglob("*") if f.is_file()]
-        dirs = [d for d in fitbit_folder.rglob("*") if d.is_dir()]
-
-        # each dir_name is the range in which the data was collected
-        # for each file, add two folders of date_collected_start and date_collected_end
-        # reformat; pull these files outside of their folders and into the main fitbit folder or create a folder in this repo with consolidated_dataset
-        # once you consolidate that, transform/clean the data
-        # maybe turn the above step into a separate file lolz
+        
+        for f in files:
+            if ".DS_Store" not in str(f):
+                f = str(f)
+                file_directory, file_name = f.rsplit("/", 1) # change to \ for windows
+                _, dates = file_directory.rsplit("/", 1) # again, change to \ for windows
+                dates = re.findall(r"\d+\.\d+\.\d+", dates)
+                df = pd.read_csv(f, encoding="cp1252")
+                df['date_collected_start'] = dates[0]
+                df['date_collected_end'] = dates[1]
+                session_num = 1 if dates[0] == '3.12.16' else 2
+                output_path = Path(f"ingested_data/s{session_num}_{file_name}")
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                df.to_csv(output_path, index=False)
     except Exception as e:
         print(e)
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
