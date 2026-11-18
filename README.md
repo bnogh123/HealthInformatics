@@ -19,3 +19,11 @@ git clone https://github.com/bnogh123/HealthInformatics.git
 ```python
 python Scripts/Ingestion.py {dataset_folder}
 ```
+
+At this point, you should also have a folder in your directory called `ingested_data` that stores all the required data needed.
+
+5. Run Transform.py with the below command -- this will clean the dataset and transform any data that is inadequate.
+
+```python
+python Scripts/Transform.py
+```
