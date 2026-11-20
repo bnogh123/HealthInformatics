@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 import regex as re
 import traceback
+import datetime
 
 # Localized Version of Ingestion
 DEFAULT_FOLDER = (Path.home() / "Downloads" / "Cloud-Native_Data_Engineering" / "Final_Project" / "fitbit")
@@ -22,6 +23,9 @@ def parse():
         help="The input folder to read (defaults to the Fitbit project folder)",
     )
     return parser.parse_args().foldername
+
+def to_iso(d):
+    return datetime.strptime(d, "%m.%d.%y").strftime("%Y-%m-%d")
 
 def main():
     fitbit_folder = Path(parse()).expanduser()
@@ -44,8 +48,8 @@ def main():
                 break
 
             df = pd.read_csv(f, encoding="cp1252")
-            df["date_collected_start"] = dates[0]
-            df["date_collected_end"] = dates[1]
+            df["date_collected_start"] = to_iso(dates[0])
+            df["date_collected_end"] = to_iso(dates[1])
             session_num = 1 if dates[0] == "3.12.16" else 2
             output_path = Path("ingested_data") / f"s{session_num}_{file_name}"
             output_path.parent.mkdir(parents=True, exist_ok=True)
