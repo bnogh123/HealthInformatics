@@ -9,6 +9,7 @@ import pandas as pd
 import regex as re
 import traceback
 
+# Localized Version of Ingestion
 DEFAULT_FOLDER = (Path.home() / "Downloads" / "Cloud-Native_Data_Engineering" / "Final_Project" / "fitbit")
 IGNORED_FILES = {".DS_Store", "Thumbs.db", "desktop.ini"}  # mac / Windows junk files
 
