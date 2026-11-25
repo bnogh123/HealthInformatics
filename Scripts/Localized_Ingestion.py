@@ -25,7 +25,7 @@ def parse():
     return parser.parse_args().foldername
 
 def to_iso(d):
-    return datetime.strptime(d, "%m.%d.%y").strftime("%Y-%m-%d")
+    return datetime.strptime(d, "%m.%d.%y").strftime("%Y-%m-%d") # needs pd.to_datetime
 
 def main():
     fitbit_folder = Path(parse()).expanduser()
@@ -36,6 +36,9 @@ def main():
 
     try:
         files = [f for f in fitbit_folder.rglob("*") if f.is_file() and f.name not in IGNORED_FILES]
+
+        session_df = pd.DataFrame(columns=['id', 'start_date', 'end_date'])
+        participant_df = pd.DataFrame(columns=['id'])
 
         for f in files:
             file_name = f.name 
@@ -48,12 +51,20 @@ def main():
                 break
 
             df = pd.read_csv(f, encoding="cp1252")
-            df["date_collected_start"] = to_iso(dates[0])
-            df["date_collected_end"] = to_iso(dates[1])
+            date_collected_start = to_iso(dates[0])
+            date_collected_end = to_iso(dates[1])
             session_num = 1 if dates[0] == "3.12.16" else 2
+            df['session'] = session_num
+            if session_num not in session_df['id'].values:
+                new_row = {'id': session_num, 'start_date': date_collected_start, 'end_date': date_collected_end}
+                session_df.loc[len(session_df)] = new_row
+            new_participant_ids = df[~df['id'].isin(participant_df['id'])][['id']].drop_duplicates()
+            participant_df = pd.concat([participant_df, new_participant_ids], ignore_index=True)
             output_path = Path("ingested_data") / f"s{session_num}_{file_name}"
             output_path.parent.mkdir(parents=True, exist_ok=True)
             df.to_csv(output_path, index=False)
+        output_path = Path("ingested_data") / "session"
+        session_df.to_csv(output_path, index=False)
 
     except Exception as e:
         print(e)
