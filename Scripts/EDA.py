@@ -68,6 +68,32 @@ def imputation():
     df1.to_csv('ingested_data/s1_weightLogInfo_merged.csv', index=False)
     df2.to_csv('ingested_data/s2_weightLogInfo_merged.csv', index=False)
 
+def merge_wide_narrow(narrow_path, wide_path, value_col):
+    # narrow: Id, ActivityMinute, <value_col>
+    narrow = pd.read_csv(narrow_path)
+    narrow["ActivityMinute"] = pd.to_datetime(narrow["ActivityMinute"], format="%m/%d/%Y %I:%M:%S %p")
+
+    # wide: Id, ActivityHour, <value_col>00 ... <value_col>59  ->  one row per minute
+    wide = pd.read_csv(wide_path)
+    wide["ActivityHour"] = pd.to_datetime(wide["ActivityHour"], format="%m/%d/%Y %I:%M:%S %p")
+    long = wide.melt(id_vars=["Id", "ActivityHour"], var_name="minute", value_name=value_col)
+    long["ActivityMinute"] = long["ActivityHour"] + pd.to_timedelta(
+        long["minute"].str[len(value_col):].astype(int), unit="m")
+    long = long[["Id", "ActivityMinute", value_col]]
+
+    # stack, then keep one row per (Id, ActivityMinute)
+    return (pd.concat([narrow, long], ignore_index=True).drop_duplicates(["Id", "ActivityMinute"]).sort_values(["Id", "ActivityMinute"], ignore_index=True))
+
+def merge_all():
+    calories = merge_wide_narrow("minuteCaloriesNarrow_merged.csv", "minuteCaloriesWide_merged.csv", "Calories")
+    intensities = merge_wide_narrow("minuteIntensitiesNarrow_merged.csv", "minuteIntensitiesWide_merged.csv", "Intensity")
+    steps = merge_wide_narrow("minuteStepsNarrow_merged.csv", "minuteStepsWide_merged.csv", "Steps")
+    for df in (calories, intensities, steps):
+        df["session_id"] = 2
+    calories.to_csv("ingested_data/minuteCaloriesNarrow_merged.csv", index=False)
+    intensities.to_csv("ingested_data/minuteIntensitiesNarrow_merged.csv", index=False)
+    steps.to_csv("ingested_data/minuteStepsNarrow_merged.csv", index=False)
+
 # statistical anomalies
 
 # correlations
@@ -82,6 +108,7 @@ if __name__ == "__main__":
             schema_documentation_null_analysis()
         case "clean":
             deduplication()
+            merge_all()
             type_casting()
             imputation()
             print("Data cleanup successful!")
